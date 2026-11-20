@@ -399,7 +399,14 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug = n => 'lv-' + n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 function hashNum(s){ let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
-function thumb(name, label = true){ const h = hashNum(name); return `<span class="thumb" style="background-position:${h % 101}% ${35 + (h >> 7) % 41}%;filter:hue-rotate(${(h >> 13) % 70 - 35}deg)">${label ? `<b>${esc(name)}</b>` : ''}</span>`; }
+function vidOf(name){
+  const n = NOW.find(r => r.name === name); if (n && n.vid) return n.vid;
+  const urls = [...(SRC[name] || []).map(x => x[1]), ...[...PRED, ...HM, ...CANDS].filter(x => x.name === name).flatMap(x => (x.videos || []).map(v => v[1]))];
+  for (const u of urls) { const m = /(?:v=|youtu\.be\/|\/live\/|\/shorts\/)([\w-]{11})/.exec(u || ''); if (m) return m[1]; }
+  return null;
+}
+const ytBg = (id, fallback) => `background-image:url(https://i.ytimg.com/vi/${id}/hqdefault.jpg),url(bg.jpg);background-size:cover,190%;background-position:center,${fallback}`;
+function thumb(name, label = true){ const h = hashNum(name), id = vidOf(name), fb = `${h % 101}% ${35 + (h >> 7) % 41}%`; return `<span class="thumb" style="${id ? ytBg(id, fb) : `background-position:${fb};filter:hue-rotate(${(h >> 13) % 70 - 35}deg)`}">${label ? `<b>${esc(name)}</b>` : ''}</span>`; }
 const best0 = p => Math.max(0, ...p.runs.filter(r => r[0] === 0).map(r => r[1]));
 const bestRun = p => p.runs.filter(r => r[0] > 0).sort((a, b) => (b[1] - a[1]) || (a[0] - b[0]))[0];
 const bestOf = list => list.length ? [list[0]] : [];
@@ -568,8 +575,8 @@ function renderLevel(s){
   const by = cur ? `published by <b>${esc(cur.publisher)}</b>, verified by <b>${esc(cur.verifier)}</b>`
                  : `${pred.publisher ? `hosted by <b>${esc(pred.publisher)}</b>, ` : ''}${/^(open|no )/i.test(pred.verifier) ? esc(pred.verifier) : `${pred.group === 'verified' ? 'verified by' : 'verifier'} <b>${esc(pred.verifier)}</b>`}`;
   const video = cur
-    ? `<a class="video" href="https://www.youtube.com/watch?v=${cur.vid}" target="_blank" rel="noopener" aria-label="Watch the ${esc(name)} verification on YouTube"><span class="play"></span><span class="cap">Watch the verification on YouTube</span></a>`
-    : (pred && pred.group === 'verified' && SRC[pred.name]) ? `<a class="video" href="${SRC[pred.name][0][1]}" target="_blank" rel="noopener" aria-label="Watch the ${esc(name)} verification on YouTube"><span class="play"></span><span class="cap">Watch the verification on YouTube</span></a>`
+    ? `<a class="video" style="${ytBg(cur.vid, 'center')}" href="https://www.youtube.com/watch?v=${cur.vid}" target="_blank" rel="noopener" aria-label="Watch the ${esc(name)} verification on YouTube"><span class="play"></span><span class="cap">Watch the verification on YouTube</span></a>`
+    : (pred && pred.group === 'verified' && SRC[pred.name]) ? `<a class="video" style="${vidOf(pred.name) ? ytBg(vidOf(pred.name), 'center') : ''}" href="${SRC[pred.name][0][1]}" target="_blank" rel="noopener" aria-label="Watch the ${esc(name)} verification on YouTube"><span class="play"></span><span class="cap">Watch the verification on YouTube</span></a>`
     : `<div class="novideo">Not verified yet. No video.</div>`;
   const facts = cur
     ? [['Position','#' + cur.was],['Level ID',cur.id],['Verifier',cur.verifier],['Publisher',cur.publisher]]
